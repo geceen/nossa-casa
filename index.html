@@ -326,7 +326,7 @@ const TIPOS = {
 const ICON_CAT = {'Material':'🧱','Mão de obra':'👷','Serviço / locação':'🚜','Projeto / taxas':'📄','Frete / entrega':'🚚','Outros':'📦'};
 const CATS_PES = ['Móveis / casa nova','Empréstimos','Alimentação','Transporte','Saúde','Beleza / cuidados','Lazer','Roupas','Assinaturas','Educação','Contas / celular','Presentes','Moradia atual','Outros'];
 const ICON_PES = {'Móveis / casa nova':'🛋️','Empréstimos':'🏦','Alimentação':'🍔','Transporte':'🚗','Saúde':'💊','Beleza / cuidados':'💅','Lazer':'🎉','Roupas':'👕','Assinaturas':'📺','Educação':'🎓','Contas / celular':'📱','Presentes':'🎁','Moradia atual':'🏠','Outros':'🧾'};
-const TIPOS_ENT = ['Extra','Freela / bico','Hora extra','13º salário','Férias','Bônus / PLR','Venda','Presente','Restituição IR','Outro'];
+const TIPOS_ENT = ['Depósito no caixa','Extra','Freela / bico','Hora extra','13º salário','Férias','Bônus / PLR','Venda','Presente','Restituição IR','Outro'];
 const PGTO = ['Pix','Dinheiro','Cartão de crédito','Débito','Boleto','Transferência'];
 const COLS = ['obra','pessoais','entradas','reserva','planejados','cartoes'];
 const CORES = {roxo:['#8a2be2','#4b1380'],laranja:['#ff7a1a','#c74a00'],preto:['#3a3a3a','#0e0e0e'],azul:['#2d6cdf','#173f8a'],verde:['#1f9d74','#0f5c43'],vermelho:['#e0393e','#8f1d21'],dourado:['#d9a640','#8a6417'],rosa:['#e3487f','#952450'],prata:['#9aa3ad','#5c646d']};
@@ -486,6 +486,7 @@ const C={
  caixaAte(m){let t=+D.cfg.saldoCaixa||0;for(let k=D.cfg.inicio;k<=m;k=addM(k,1)){t+=C.mes(k).sobra}return t},
  guardadoAte(m){return(+D.cfg.saldoReserva||0)+sum(vals('reserva').filter(i=>ymOf(i.data)<=m),i=>(i.tipo==='retirada'?-1:1)*(+i.valor||0))},
  livre(m){const x=C.mes(m);const metaPend=Math.max(0,(+D.cfg.metaReserva||0)-Math.max(0,x.guard));return x.renda-x.pes-x.obra-Math.max(0,x.guard)-metaPend},
+ proj(m,n=12){let sd=C.caixaAte(m);const out=[];for(let k=1;k<=n;k++){const mk=addM(m,k);const x=C.mes(mk);sd+=x.sobra;out.push({m:mk,x,sd})}return out},
  compromissosApos(m){return sum(vals('obra').filter(i=>['pago','agendado'].includes(i.status||'pago')),i=>sum(C.parcelas(i).filter(p=>p.m>m),p=>p.v))+sum(vals('pessoais').filter(i=>!i.recorrente),i=>sum(C.parcelas(i).filter(p=>p.m>m),p=>p.v))},
  poder(m){const metaPend=Math.max(0,(+D.cfg.metaReserva||0)-Math.max(0,C.resMes(m)));return C.caixaAte(m)-(+D.cfg.emergencia||0)-C.compromissosApos(m)-metaPend},
  base(){const m=UI.mes;const sal=C.sal(m)||sum((D.cfg.salHist||[]).slice(-1),h=>(+h.g||0)+(+h.r||0));const recE=sum(vals('entradas').filter(i=>i.recorrente&&C.rec(i,m)),i=>i.valor);const recP=sum(vals('pessoais').filter(i=>i.recorrente&&C.rec(i,m)),i=>i.valor);
@@ -502,7 +503,11 @@ const C={
   its.sort((a,b)=>a._r-b._r||(P[a.prioridade]??1)-(P[b.prioridade]??1)||String(a.prazo||'9').localeCompare(String(b.prazo||'9')));
   let rest=poder;its.forEach(i=>{const v=+i.valor||0;if(v<=rest){i._now=1;rest-=v}});let acc=0;return its.map(i=>{const v=+i.valor||0;let quando,cls;if(i._now){quando='Dá pra comprar agora';cls='agora'}else if((acc+=v,base>0)){const k=Math.max(1,Math.ceil((acc-rest)/base));quando=k<=1?'Próximo mês ('+mName(addM(m,1),true)+')':'Em ~'+k+' meses ('+mName(addM(m,k),true)+')';cls=k<=1?'prox':'depois'}else{quando='Sem previsão (renda livre ≤ 0)';cls='depois'}return Object.assign(i,{quando,cls,acc})})},
  alertas(){const m=UI.mes,A=[];const x=C.mes(m),livre=C.livre(m),cx=C.caixaAte(m),em=+D.cfg.emergencia||0;
-  if(!(D.cfg.salHist||[]).length)A.push(['info','👋','Comece em <b>Salários & extras</b> cadastrando o salário líquido de cada um — é a base de todos os cálculos.']);
+  const semSal=!(D.cfg.salHist||[]).some(h=>(+h.g||0)+(+h.r||0)>0);
+  const pj=C.proj(m,12),neg=pj.find(p=>p.sd<0);
+  if(neg)A.push(['bad','📉',`Sem novas entradas, o caixa <b>fica negativo em ${mName(neg.m)}</b> (${brl0(neg.sd)}). Até lá ele cobre todas as parcelas já assumidas${semSal?' — cadastrem os salários quando começarem a receber':''}.`]);
+  else if(pj.length)A.push(['good','🛡️',`O caixa cobre todas as parcelas já assumidas pelos próximos 12 meses (sobra ${brl0(pj[pj.length-1].sd)} em ${mName(pj[pj.length-1].m,true)}).`]);
+  if(semSal)A.push(['info','💼','Ainda sem salário cadastrado: os gastos estão saindo do caixa. Quando depositarem algum valor, lancem em <b>Salários & extras → + Extra / entrada</b> (tipo "Depósito no caixa").']);
   if(!D.cfg.orcamentoTotal)A.push(['info','📐','Defina o <b>orçamento total da obra</b> em Ajustes para o sistema dividir por fase e acompanhar estouros.']);
   if(x.renda>0&&livre<0)A.push(['bad','🚨',`Os gastos de ${mName(m)} passam da renda em <b>${brl(-livre)}</b>. Segurem compras não urgentes.`]);
   if(em&&cx<em)A.push(['bad','🛟',`O caixa (${brl0(cx)}) está abaixo do colchão de emergência (${brl0(em)}).`]);
@@ -597,8 +602,8 @@ painel(){const m=UI.mes,x=C.mes(m),livre=C.livre(m),cx=C.caixaAte(m),gd=C.guarda
  const rec=C.recomendacoes().slice(0,4);const tot=Math.max(x.renda,x.pes+x.obra+Math.max(0,x.guard));
  const seg=[['Pessoais',x.pes,'#e9a23b'],['Obra',x.obra,'#c8553d'],['Guardado',Math.max(0,x.guard),'#3d6fb5'],['Sobra',Math.max(0,x.sobra),'#2f6b58']];
  return `<div class="grid g4">
-  ${kpi('Pode gastar na obra agora',money(Math.max(0,poder)),poder<0?'⚠️ Caixa comprometido':'Caixa − colchão − parcelas futuras','hero')}
-  ${kpi('Livre em '+mName(m,true),money(livre),'Renda − pessoais − obra − meta')}
+  ${kpi('Pode gastar na obra agora',money(Math.max(0,poder)),poder<0?`⚠️ Parcelas futuras (${brl0(C.compromissosApos(m))}) passam do caixa`:'Caixa − colchão − parcelas futuras','hero')}
+  ${kpi('Livre em '+mName(m,true),money(livre),x.renda>0?'Renda − pessoais − obra − meta':'Sem renda no mês: gastos saindo do caixa')}
   ${kpi('Caixa (fim do mês)',money(cx),'Dinheiro disponível do casal')}
   ${kpi('Guardado',money(gd),D.cfg.metaReserva?'Meta: '+brl0(D.cfg.metaReserva)+'/mês':'Reserva / investimentos')}
  </div>
@@ -676,6 +681,8 @@ caixa(){const m=UI.mes;const months=[];for(let k=addM(m,-11);k<=m;k=addM(k,1))if
  <div class="card" style="margin-top:12px"><h3>Mês a mês</h3><div class="tscroll"><table class="t"><thead><tr><th>Mês</th><th>Renda</th><th>Pessoais</th><th>Obra</th><th>Guardou</th><th>Sobra</th><th>Caixa</th></tr></thead><tbody>
  ${months.reverse().map(k=>{const x=C.mes(k);return `<tr><td style="text-transform:capitalize">${mName(k,true)}</td><td>${brl0(x.renda)}</td><td>${brl0(x.pes)}</td><td>${brl0(x.obra)}</td><td>${brl0(x.guard)}</td><td class="${x.sobra<0?'neg':'pos'}">${brl0(x.sobra)}</td><td>${brl0(C.caixaAte(k))}</td></tr>`}).join('')||'<tr><td colspan="7">—</td></tr>'}
  </tbody></table></div><div class="note" style="margin-top:8px">Controle iniciado em <b>${mName(D.cfg.inicio)}</b>. Saldo inicial do caixa: ${brl(D.cfg.saldoCaixa)} · guardado inicial: ${brl(D.cfg.saldoReserva)} (altere em Ajustes).</div></div>
+ <div class="card" style="margin-top:12px"><h3>Projeção dos próximos 12 meses</h3><div class="note" style="margin-bottom:8px">Considera salários e entradas fixas cadastrados, gastos fixos, parcelas de cartão e pagamentos agendados da obra. Itens só planejados (como o restante do pedreiro) não entram até serem lançados.</div><div class="tscroll"><table class="t"><thead><tr><th>Mês</th><th>Entra</th><th>Sai</th><th>Caixa no fim</th></tr></thead><tbody>
+ ${C.proj(m,12).map(p=>`<tr><td style="text-transform:capitalize">${mName(p.m,true)}</td><td>${brl0(p.x.renda)}</td><td>${brl0(p.x.pes+p.x.obra+Math.max(0,p.x.guard))}</td><td class="${p.sd<0?'neg':'pos'}">${brl0(p.sd)}</td></tr>`).join('')}</tbody></table></div></div>
  <div class="card" style="margin-top:12px"><h3>Movimentos do guardado</h3>${movs.length?`<div class="list">${movs.map(i=>`<div class="row" data-edit="reserva:${i.id}"><div class="dot">${i.tipo==='retirada'?'⬇️':'⬆️'}</div><div class="t"><b>${esc(i.descricao||(i.tipo==='retirada'?'Retirada':'Aporte'))}</b><small>${fmtD(i.data)} · ${NM(i.por)}</small></div><div class="val ${i.tipo==='retirada'?'neg':'pos'}">${i.tipo==='retirada'?'−':'+'} ${brl(i.valor)}</div></div>`).join('')}</div>`:'<div class="empty"><div class="big">🐷</div>Registre aqui o que vocês separarem na poupança/investimento.</div>'}</div>`},
 
 cartoes(){const m=UI.mes,sel=UI.cardSel;const cs=vals('cartoes').sort((a,b)=>(a.ativo===false)-(b.ativo===false)||String(a.nome).localeCompare(b.nome));
