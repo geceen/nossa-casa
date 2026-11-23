@@ -10,10 +10,10 @@
 // Quem protege os dados são as Regras do Firestore (arquivo firestore.rules)
 // e o login com e-mail e senha de vocês dois.
 window.CASA_FIREBASE = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCXXUmBHxTDtqKkEuA04wu2qlbWtYkQdoM",
+  authDomain: "nossa-casa-780ef.firebaseapp.com",
+  projectId: "nossa-casa-780ef",
+  storageBucket: "nossa-casa-780ef.firebasestorage.app",
+  messagingSenderId: "601007346013",
+  appId: "1:601007346013:web:7105cbeac73cda760798b4"
 };
