@@ -602,8 +602,8 @@ painel(){const m=UI.mes,x=C.mes(m),livre=C.livre(m),cx=C.caixaAte(m),gd=C.guarda
  const rec=C.recomendacoes().slice(0,4);const tot=Math.max(x.renda,x.pes+x.obra+Math.max(0,x.guard));
  const seg=[['Pessoais',x.pes,'#e9a23b'],['Obra',x.obra,'#c8553d'],['Guardado',Math.max(0,x.guard),'#3d6fb5'],['Sobra',Math.max(0,x.sobra),'#2f6b58']];
  return `<div class="grid g4">
-  ${kpi('Pode gastar na obra agora',money(Math.max(0,poder)),poder<0?`⚠️ Parcelas futuras (${brl0(C.compromissosApos(m))}) passam do caixa`:'Caixa − colchão − parcelas futuras','hero')}
-  ${kpi('Livre em '+mName(m,true),money(livre),x.renda>0?'Renda − pessoais − obra − meta':'Sem renda no mês: gastos saindo do caixa')}
+  ${(()=>{const semR=!(D.cfg.salHist||[]).some(h=>(+h.g||0)+(+h.r||0)>0);if(!semR)return kpi('Pode gastar na obra agora',money(Math.max(0,poder)),poder<0?`⚠️ Parcelas futuras (${brl0(C.compromissosApos(m))}) passam do caixa`:'Caixa − colchão − parcelas futuras','hero');const pj=C.proj(m,24),ng=pj.findIndex(p=>p.sd<0);const ate=ng<0?'+2 anos':ng===0?mName(m,true):mName(pj[ng-1].m,true);return kpi('Caixa aguenta até',`<span style="text-transform:capitalize">${ate}</span>`,'Sem novas entradas, pagando todas as parcelas já lançadas','hero')})()}
+  ${x.renda>0?kpi('Livre em '+mName(m,true),money(livre),'Renda − pessoais − obra − meta'):kpi('Sai do caixa em '+mName(m,true),brl(x.pes+x.obra+Math.max(0,x.guard)),'Sem renda no mês — pago com o caixa')}
   ${kpi('Caixa (fim do mês)',money(cx),'Dinheiro disponível do casal')}
   ${kpi('Guardado',money(gd),D.cfg.metaReserva?'Meta: '+brl0(D.cfg.metaReserva)+'/mês':'Reserva / investimentos')}
  </div>
