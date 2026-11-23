@@ -2,20 +2,13 @@
 
 Mesmo esquema do sistema da GECEEN: o **GitHub Pages** hospeda o site, o **Firebase** guarda e sincroniza os dados e o app pode ser **instalado na tela inicial** do celular. Leva uns 15 minutos, uma vez só.
 
-## 1. Firebase (onde ficam os dados)
-1. Acesse https://console.firebase.google.com → **Adicionar projeto** → nome `nossa-casa` (pode desligar o Google Analytics).
-2. Menu **Criação → Firestore Database → Criar banco de dados** → local `southamerica-east1 (São Paulo)` → **modo de produção**.
-3. Na aba **Regras**, apague tudo, cole o conteúdo do arquivo `firestore.rules`, **troque os dois e-mails** pelos de vocês e clique em **Publicar**.
-4. Menu **Criação → Authentication → Vamos começar → E-mail/senha → Ativar**.
-5. Em **Authentication → Usuários → Adicionar usuário**, crie o seu login e o da Rebeca (e-mail + senha). Use os mesmos e-mails das regras.
-6. Engrenagem ⚙️ → **Configurações do projeto** → em "Seus aplicativos" clique em **</>** → apelido `nossa-casa-web` → **Registrar app**. Deixe aberta a tela com o `firebaseConfig`.
+## ✅ Já configurado
+- Site: **https://geceen.github.io/nossa-casa/** (GitHub Pages, branch `main`)
+- Firebase: projeto **nossa-casa-780ef** (conta geceen.adm@gmail.com), Firestore em São Paulo, login por e-mail/senha ativado, cadastro público desligado e regras publicadas (só logado acessa).
+- `config.js` já preenchido.
 
-## 2. GitHub (onde fica o site)
-1. Em https://github.com/new crie o repositório `nossa-casa` (**Public**, porque o GitHub Pages grátis exige isso; os dados não ficam no GitHub, ficam no Firebase protegidos por login).
-2. Clique em **uploading an existing file** e arraste **todos os arquivos desta pasta** → **Commit changes**.
-3. Abra o arquivo `config.js` no GitHub → ✏️ editar → cole os valores do `firebaseConfig` (passo 1.6) → **Commit changes**.
-4. **Settings → Pages** → Source: `Deploy from a branch` → Branch `main` / `(root)` → **Save**.
-5. Em 1–2 minutos o site fica em: `https://SEU-USUARIO.github.io/nossa-casa/`
+## Falta só: criar os logins de vocês
+Firebase → **Authentication → Usuários → Adicionar usuário** → e-mail e senha de cada um (o seu e o da Rebeca). Para adicionar outra pessoa no futuro, é o mesmo caminho.
 
 ## 3. No celular (virar app)
 - **Android (Chrome):** abra o link → menu ⋮ → **Instalar app** / **Adicionar à tela inicial**.
