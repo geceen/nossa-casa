@@ -221,6 +221,10 @@ dialog::backdrop{background:rgba(40,25,15,.45);backdrop-filter:blur(2px)}
 .nofoto{position:absolute;left:50%;top:30px;transform:translateX(-50%) rotate(-3deg);background:#fff;padding:22px 18px;border-radius:6px;box-shadow:0 10px 26px rgba(60,30,10,.18);text-align:center;font-weight:700;color:#6b4b36;width:220px}
 .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}.th{position:relative}.th img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;display:block}
 .th input{width:100%;border:1px solid var(--line);border-radius:7px;padding:4px 6px;font-size:12px;margin-top:4px}.th button{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:24px;height:24px;background:rgba(0,0,0,.55);color:#fff;font-size:12px}
+.irow{display:grid;grid-template-columns:minmax(0,2.2fr) 58px 48px 92px minmax(0,1.3fr) 30px;gap:5px;margin-top:5px}
+.irow input,.irow select{border:1px solid var(--line);border-radius:8px;padding:7px 6px;font-size:13.5px;background:#fff;min-width:0;width:100%}
+.irow .rm{border:0;background:var(--red2);color:var(--red);border-radius:8px;font-weight:800}
+@media(max-width:560px){.irow{grid-template-columns:1fr 1fr 1fr 30px;padding:6px;border:1px solid var(--line);border-radius:10px}.irow [data-ik=d],.irow [data-ik=tipo]{grid-column:1/4}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -312,7 +316,7 @@ const FASES = [
 ];
 const CATS_OBRA = ['Material','Mão de obra','Serviço / locação','Projeto / taxas','Frete / entrega','Outros'];
 const TIPOS = {
- 'Material':['Cimento / argamassa','Areia / brita / pedra','Tijolo / bloco','Ferro / aço','Madeira / forma','Concreto usinado','Laje','Telha / cobertura','Elétrico','Hidráulico / esgoto','Impermeabilizante','Piso / revestimento','Portas / janelas','Tinta / massa','Louças / metais','Gesso / forro','Ferramentas / EPI','Outro material'],
+ 'Material':['Cimento / argamassa','Areia / brita / pedra','Tijolo / bloco','Ferro / aço','Madeira / forma','Concreto usinado','Laje','Telha / cobertura','Elétrico','Hidráulico / esgoto','Impermeabilizante','Piso / revestimento','Portas / janelas','Tinta / massa','Louças / metais','Gesso / forro','Pregos / arame','Ferramentas / EPI','Vários (ver lista)','Outro material'],
  'Mão de obra':['Pedreiro','Servente','Mestre de obras','Eletricista','Encanador','Pintor','Azulejista','Gesseiro','Carpinteiro','Serralheiro','Outro profissional'],
  'Serviço / locação':['Caçamba','Betoneira / equipamento','Terraplanagem','Poço / perfuração','Outro serviço'],
  'Projeto / taxas':['Arquiteto / engenheiro','Prefeitura / alvará','Cartório','Concessionária (água/luz)','Outra taxa'],
@@ -465,6 +469,7 @@ const C={
  rec(it,m){const m0=ymOf(it.data);if(it.recorrente)return m>=m0&&(!it.ate||m<=it.ate);return m0===m},
  isCard(it){return it.pgto===CARTAO&&it.cartao&&D.cartoes[it.cartao]},
  cardDue(it){const c=C.isCard(it);if(!c)return null;const d=it.data||today();const day=+d.slice(8,10),fe=+c.fechamento||1,ve=+c.vencimento||10;const close=day>=fe?addM(ymOf(d),1):ymOf(d);return ve>fe?close:addM(close,1)},
+ linhas(it){const L=Array.isArray(it.itens)&&it.itens.length?it.itens:null;if(!L)return[{d:it.descricao,q:it.qtd||'',un:'',v:+it.valor||0,vo:+it.valor||0,tipo:it.tipo||it.categoria,cat:it.categoria,it,solo:1}];const s=sum(L,x=>x.v)||1;const f=(+it.valor||0)/s;return L.map(x=>({d:x.d||'(sem descrição)',q:x.q||'',un:x.un||'',v:(+x.v||0)*f,vo:+x.v||0,tipo:x.tipo||it.tipo,cat:x.tipo==='Frete'?'Frete / entrega':it.categoria,it}))},
  nParc(it){return Math.max(1,parseInt(it.parcelas)||1)},
  parcelas(it){const n=C.nParc(it);const v=(+it.valor||0)/n;const m0=(/^\d{4}-\d{2}$/.test(it.mes1||'')?it.mes1:null)||C.cardDue(it)||ymOf(it.data);return Array.from({length:n},(_,i)=>({m:addM(m0,i),v,k:i+1,n}))},
  pesVal(i,m){if(i.recorrente)return C.rec(i,m)?(+i.valor||0):0;return sum(C.parcelas(i).filter(p=>p.m===m),p=>p.v)},
@@ -551,13 +556,16 @@ function defCard(){const cs=vals('cartoes').filter(c=>c.ativo!==false);return(cs
 function openForm(col,item,preset){const isNew=!item;const o=Object.assign({},preset||{},item||{});const f=SCHEMA[col]();
  f.forEach(x=>{if(o[x.k]===undefined&&x.def!==undefined)o[x.k]=typeof x.def==='function'?x.def():x.def});
  if(o.tipo===undefined&&f.find(x=>x.k==='tipo')){const op=f.find(x=>x.k==='tipo').opts;const arr=typeof op==='function'?op(o):op;o.tipo=Array.isArray(arr[0])?arr[0][0]:arr[0]}
- const draw=()=>{$('#dlgBody').innerHTML=`<h3>${isNew?'Novo':'Editar'}: ${TITLES[col]}</h3><div class="form">${f.filter(x=>!x.show||x.show(o)).map(x=>field(x,o)).join('')}</div>
+ const draw=()=>{$('#dlgBody').innerHTML=`<h3>${isNew?'Novo':'Editar'}: ${TITLES[col]}</h3><div class="form">${f.filter(x=>!x.show||x.show(o)).map(x=>field(x,o)).join('')}</div>${col==='obra'?itensEditor(o):''}
   <div class="acts">${isNew?'':`<button class="btn del" data-f="del">Excluir</button>`}${col==='planejados'&&!isNew&&!o.comprado?`<button class="btn green" data-f="buy">✔ Comprei</button>`:''}<button class="btn ghost" data-f="cancel">Cancelar</button><button class="btn" data-f="save">Salvar</button></div>`;
   $('#dlgBody').querySelectorAll('[data-k]').forEach(el=>{el.addEventListener('change',()=>{read();if(el.dataset.k==='categoria'){const op=TIPOS[o.categoria];o.tipo=op?op[0]:'';draw()}if(el.dataset.k==='recorrente'||el.dataset.k==='pgto'){if(el.dataset.k==='pgto'&&o.pgto===CARTAO&&!o.cartao)o.cartao=defCard();draw()}})})};
- const read=()=>{$('#dlgBody').querySelectorAll('[data-k]').forEach(el=>{const x=f.find(y=>y.k===el.dataset.k);let v=el.type==='checkbox'?el.checked:el.value;if(x.t==='money')v=parseMoney(v);if(x.t==='number')v=parseInt(v)||(x.min||1);o[x.k]=v})};
+ const read=()=>{if(col==='obra'){const rows=[...$('#dlgBody').querySelectorAll('[data-irow]')];if(rows.length||o.itens)o.itens=rows.map(r=>{const g=k=>r.querySelector(`[data-ik="${k}"]`).value;const q=g('q'),v=parseMoney(g('v'));const qn=parseMoney(q);return{d:g('d').trim(),q:q.trim(),un:g('un').trim(),v,vu:qn>0?Math.round(v/qn*10000)/10000:0,tipo:g('tipo')}})}$('#dlgBody').querySelectorAll('[data-k]').forEach(el=>{const x=f.find(y=>y.k===el.dataset.k);let v=el.type==='checkbox'?el.checked:el.value;if(x.t==='money')v=parseMoney(v);if(x.t==='number')v=parseInt(v)||(x.min||1);o[x.k]=v})};
  draw();const dl=$('#dlg');dl.showModal();
  $('#dlgBody').onclick=async e=>{const a=e.target.closest('[data-f]');if(!a)return;const act=a.dataset.f;
   if(act==='cancel')return dl.close();
+  if(act==='addit'){read();o.itens=(o.itens||[]).concat([{d:'',q:'',un:'',v:0,tipo:o.tipo&&o.tipo!=='Vários (ver lista)'?o.tipo:(TIPOS[o.categoria]||['Outros'])[0]}]);draw();const ins=$('#dlgBody').querySelectorAll('[data-ik="d"]');ins[ins.length-1]&&ins[ins.length-1].focus();return}
+  if(act==='rmit'){read();o.itens.splice(+a.dataset.i,1);draw();return}
+  if(act==='somait'){read();o.valor=Math.round(sum(o.itens||[],x=>x.v)*100)/100;draw();return}
   if(act==='del'){if(await ask('Excluir este registro?')){Store.del(col,o.id);dl.close();toast('Excluído')}return}
   read();const miss=f.find(x=>x.req&&(!o[x.k]||(x.t==='money'&&!(o[x.k]>0))));if(miss){toast('Preencha: '+miss.l);return}
   if(o.pgto===CARTAO&&(col==='obra'||col==='pessoais')&&!o.cartao){toast('Cadastre um cartão na aba Cartões primeiro');return}
@@ -565,6 +573,10 @@ function openForm(col,item,preset){const isNew=!item;const o=Object.assign({},pr
   if(act==='buy'){o.comprado=true;o.compradoEm=today();Store.put('planejados',o);dl.close();openForm('obra',null);setTimeout(()=>{const p=$('#dlgBody');const set=(k,v)=>{const el=p.querySelector(`[data-k="${k}"]`);if(el)el.value=v};set('descricao',o.descricao);set('valor',String(o.valor).replace('.',','));set('fase',o.fase);set('categoria',o.categoria);el=p.querySelector('[data-k="categoria"]');el&&el.dispatchEvent(new Event('change'));setTimeout(()=>set('tipo',o.tipo),20)},30);toast('Marque o valor real pago e salve 👍');return}
   Store.put(col,o);dl.close();toast(isNew?'Salvo ✨':'Atualizado')}}
 let el;
+function itensEditor(o){const L=o.itens||[];const tp=[...new Set(Object.values(TIPOS).flat().concat(['Frete']))];const s=sum(L,x=>x.v);
+ return `<div class="itens"><label style="display:block;font-size:12.5px;font-weight:800;color:var(--mut);margin:14px 0 4px">Lista de materiais (opcional) — para filtrar item a item</label>
+ ${L.map((x,i)=>`<div class="irow" data-irow="${i}"><input data-ik="d" placeholder="Material" value="${esc(x.d)}"><input data-ik="q" placeholder="Qtd" inputmode="decimal" value="${esc(x.q)}"><input data-ik="un" placeholder="Un" value="${esc(x.un)}"><input data-ik="v" placeholder="Total R$" inputmode="decimal" value="${x.v?String(x.v).replace('.',','):''}"><select data-ik="tipo">${tp.map(t=>`<option ${t===x.tipo?'selected':''}>${t}</option>`).join('')}</select><button type="button" class="rm" data-f="rmit" data-i="${i}" aria-label="Remover item">✕</button></div>`).join('')}
+ <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn ghost sm" data-f="addit">+ Item</button>${L.length?`<span class="note">Soma dos itens: <b>${brl(s)}</b>${Math.abs(s-(+o.valor||0))>0.009?` · valor da compra ${brl(o.valor)} <button type="button" class="btn ghost sm" data-f="somait">usar a soma</button>`:' ✓'}</span>`:''}</div></div>`}
 function field(x,o){const v=o[x.k];const id='f_'+x.k;let inp;
  if(x.t==='select'){let op=typeof x.opts==='function'?x.opts(o):x.opts;op=(op||[]).map(z=>Array.isArray(z)?z:[z,z]);inp=`<select id="${id}" data-k="${x.k}">${op.map(([a,b])=>`<option value="${esc(a)}" ${String(a)===String(v)?'selected':''}>${esc(b)}</option>`).join('')}</select>`}
  else if(x.t==='textarea')inp=`<textarea id="${id}" data-k="${x.k}" rows="2">${esc(v)}</textarea>`;
@@ -610,15 +622,18 @@ painel(){const m=UI.mes,x=C.mes(m),livre=C.livre(m),cx=C.caixaAte(m),gd=C.guarda
  <div class="sec"><h2>Últimos gastos da obra</h2><button class="btn sm" data-new="obra">+ Gasto da obra</button></div>
  <div class="card">${obraList(vals('obra').sort((a,b)=>(b.data||'').localeCompare(a.data||'')||b.upd-a.upd).slice(0,6))}</div>`},
 
-obra(){const F=UI.filt;let it=vals('obra');
- it=it.filter(i=>(!F.fase||i.fase===F.fase)&&(!F.cat||i.categoria===F.cat)&&(!F.tipo||i.tipo===F.tipo)&&(!F.status||(i.status||'pago')===F.status)&&(!F.q||(i.descricao+' '+(i.fornecedor||'')+' '+(i.obs||'')).toLowerCase().includes(F.q.toLowerCase()))&&(!F.pago||ymOf(i.data)===UI.mes));
+obra(){const F=UI.filt;let it=vals('obra');const T=UI.obraTab||'compras';
+ const lineOk=l=>(!F.tipo||l.tipo===F.tipo)&&(!F.q||(l.d+' '+(l.it.descricao||'')+' '+(l.it.fornecedor||'')+' '+(l.it.obs||'')+' '+(l.it.grupo||'')).toLowerCase().includes(F.q.toLowerCase()));
+ it=it.filter(i=>(!F.fase||i.fase===F.fase)&&(!F.cat||i.categoria===F.cat)&&(!F.status||(i.status||'pago')===F.status)&&(!F.pago||ymOf(i.data)===UI.mes)&&C.linhas(i).some(lineOk));
  it.sort((a,b)=>(b.data||'').localeCompare(a.data||'')||b.upd-a.upd);
- const tipos=F.cat?TIPOS[F.cat]:[...new Set(Object.values(TIPOS).flat())];const tot=sum(it,i=>i.valor);
- const pago=sum(it.filter(i=>(i.status||'pago')==='pago'),i=>i.valor),ag=sum(it.filter(i=>i.status==='agendado'),i=>i.valor),orc=sum(it.filter(i=>i.status==='orcamento'),i=>i.valor);
- const real=it.filter(i=>(i.status||'pago')!=='orcamento');
+ const LN=it.flatMap(i=>C.linhas(i)).filter(lineOk);const st=l=>l.it.status||'pago';
+ const tipos=[...new Set((F.cat?TIPOS[F.cat]:Object.values(TIPOS).flat()).concat(['Frete']))];const tot=sum(LN,l=>l.v);
+ const pago=sum(LN.filter(l=>st(l)==='pago'),l=>l.v),ag=sum(LN.filter(l=>st(l)==='agendado'),l=>l.v),orc=sum(LN.filter(l=>st(l)==='orcamento'),l=>l.v);
+ const real=LN.filter(l=>st(l)!=='orcamento');
+ const mats=LN.slice().sort((a,b)=>(b.it.data||'').localeCompare(a.it.data||'')||b.v-a.v);
  return `<div class="sec"><h2>Gastos da obra</h2><button class="btn" data-new="obra">+ Novo gasto</button></div>
  <div class="filters">
-  <input data-filt="q" placeholder="🔎 Buscar (descrição, loja, pedreiro…)" value="${esc(F.q)}" style="flex:1;min-width:200px">
+  <input data-filt="q" placeholder="🔎 Buscar (material, loja, pedreiro…)" value="${esc(F.q)}" style="flex:1;min-width:200px">
   <select data-filt="fase"><option value="">Todas as fases</option>${FASES.map(f=>`<option value="${f.id}" ${F.fase===f.id?'selected':''}>${f.n}</option>`).join('')}</select>
   <select data-filt="cat"><option value="">Todas as categorias</option>${CATS_OBRA.map(c=>`<option ${F.cat===c?'selected':''}>${c}</option>`).join('')}</select>
   <select data-filt="tipo"><option value="">Todos os tipos</option>${tipos.map(c=>`<option ${F.tipo===c?'selected':''}>${c}</option>`).join('')}</select>
@@ -626,14 +641,14 @@ obra(){const F=UI.filt;let it=vals('obra');
   <select data-filt="pago"><option value="">Todo o período</option><option value="1" ${F.pago?'selected':''}>Só ${mName(UI.mes)}</option></select>
   ${Object.values(F).some(Boolean)?'<button class="btn ghost sm" data-act="clearf">Limpar filtros</button>':''}
  </div>
- <div class="grid g4">${kpi('Total filtrado',brl(tot),it.length+' lançamento(s)')}${kpi('Pago',brl(pago))}${kpi('Agendado / a pagar',brl(ag))}${kpi('Só orçamento',brl(orc),'Não entra no caixa')}</div>
+ <div class="grid g4">${kpi('Total filtrado',brl(tot),T==='materiais'?mats.length+' material(is)':it.length+' compra(s)')}${kpi('Pago',brl(pago))}${kpi('Agendado / a pagar',brl(ag))}${kpi('Só orçamento',brl(orc),'Não entra no caixa')}</div>
  <div class="grid g3" style="margin-top:12px">
-  <div class="card"><h3>Por categoria</h3>${hbars(group(real,i=>i.categoria,i=>i.valor),pago+ag)}</div>
-  <div class="card"><h3>Por tipo de material / serviço</h3>${hbars(group(real,i=>i.tipo,i=>i.valor),pago+ag)}</div>
-  <div class="card"><h3>Por loja / profissional</h3>${hbars(group(real,i=>i.fornecedor||'Sem nome',i=>i.valor),pago+ag)}</div>
+  <div class="card"><h3>Por categoria</h3>${hbars(group(real,l=>l.cat,l=>l.v),pago+ag)}</div>
+  <div class="card"><h3>Por tipo de material / serviço</h3>${hbars(group(real,l=>l.tipo,l=>l.v),pago+ag)}</div>
+  <div class="card"><h3>Por loja / profissional</h3>${hbars(group(real,l=>l.it.fornecedor||'Sem nome',l=>l.v),pago+ag)}</div>
  </div>
- <div class="card" style="margin-top:12px">${obraList(it)}</div>`},
-
+ <div class="sec" style="margin-top:14px"><div class="tabs"><button data-otab="compras" class="${T==='compras'?'on':''}">🧾 Compras</button><button data-otab="materiais" class="${T==='materiais'?'on':''}">🧱 Materiais item a item</button></div></div>
+ <div class="card">${T==='compras'?obraList(it):(mats.length?`<div class="list">${mats.map(l=>`<div class="row" data-edit="obra:${l.it.id}"><div class="dot">${l.tipo==='Frete'?'🚚':ICON_CAT[l.cat]||'🧱'}</div><div class="t"><b>${esc(l.d)}</b><small>${[l.q?esc(l.q)+' '+esc(l.un):'',esc(l.tipo||''),esc(l.it.fornecedor||''),fmtD(l.it.data),l.solo?'':'🧾 '+esc(l.it.descricao)].filter(Boolean).join(' · ')}</small></div><div class="val">${brl(l.vo)}${l.vu?`<small>${brl(l.vu)} / ${esc(l.un||'un')}</small>`:''}</div></div>`).join('')}</div>`:'<div class="empty">Nenhum material encontrado.</div>')}</div>`},
 planejar(){const m=UI.mes,poder=C.poder(m),base=C.base();const rec=C.recomendacoes();const comprados=vals('planejados').filter(i=>i.comprado);const cf=FASES[C.faseAtualIdx()],nf=FASES[C.faseAtualIdx()+1];
  const agora=sum(rec.filter(r=>r.cls==='agora'),r=>r.valor);
  return `<div class="sec"><h2>O que comprar (e quando)</h2><button class="btn" data-new="planejados">+ Item que precisamos</button></div>
@@ -727,7 +742,7 @@ ajustes(){const c=D.cfg;const inp=(k,l,money,extra='')=>`<div class="form"><labe
  </div>`}
 };
 function obraList(it){if(!it.length)return `<div class="empty"><div class="big">🧱</div>Nenhum gasto encontrado. Toque no <b>+</b> para lançar cimento, pedreiro, frete…</div>`;
- return `<div class="list">${it.map(i=>{const n=parseInt(i.parcelas)||1;const st=i.status||'pago';return `<div class="row" data-edit="obra:${i.id}"><div class="dot">${ICON_CAT[i.categoria]||'📦'}</div><div class="t"><b>${esc(i.descricao)}</b><small>${fmtD(i.data)} · ${esc(i.tipo||i.categoria)}${i.fornecedor?' · '+esc(i.fornecedor):''}${C.isCard(i)?' · 💳 '+esc(D.cartoes[i.cartao].nome):''}${i.grupo?' · 🔗 '+esc(i.grupo):''} · ${esc((FASES.find(f=>f.id===i.fase)||{}).n||'')}</small></div><div class="val">${brl(i.valor)}<small><span class="tag ${st}">${{pago:'pago',agendado:'a pagar',orcamento:'orçamento'}[st]}</span>${n>1?n+'x '+brl0(i.valor/n):''}</small></div></div>`}).join('')}</div>`}
+ return `<div class="list">${it.map(i=>{const n=parseInt(i.parcelas)||1;const st=i.status||'pago';return `<div class="row" data-edit="obra:${i.id}"><div class="dot">${ICON_CAT[i.categoria]||'📦'}</div><div class="t"><b>${esc(i.descricao)}</b><small>${fmtD(i.data)} · ${(i.itens||[]).length?'📋 '+i.itens.length+' itens':esc(i.tipo||i.categoria)}${i.fornecedor?' · '+esc(i.fornecedor):''}${C.isCard(i)?' · 💳 '+esc(D.cartoes[i.cartao].nome):''}${i.grupo?' · 🔗 '+esc(i.grupo):''} · ${esc((FASES.find(f=>f.id===i.fase)||{}).n||'')}</small></div><div class="val">${brl(i.valor)}<small><span class="tag ${st}">${{pago:'pago',agendado:'a pagar',orcamento:'orçamento'}[st]}</span>${n>1?n+'x '+brl0(i.valor/n):''}</small></div></div>`}).join('')}</div>`}
 function recRow(r){const F=FASES.find(f=>f.id===r.fase);return `<div class="row" data-edit="planejados:${r.id}"><div class="dot">${{alta:'🔴',media:'🟡',baixa:'🟢'}[r.prioridade]||'🟡'}</div><div class="t"><b>${esc(r.descricao)}</b><small>${esc(F?F.n:'')}${r.prazo?' · até '+fmtD(r.prazo):''}</small></div><div class="val">${brl(r.valor)}<small><span class="tag ${r.cls}">${r.quando}</span></small></div></div>`}
 
 /* ======================= RENDER ======================= */
@@ -737,7 +752,7 @@ function render(){if(MODE==='init'&&!Object.keys(D.obra).length&&!D.cfg.salHist.
  const v=VIEWS[UI.view]||VIEWS.painel;$('#view').innerHTML=`<div class="view">${v()}</div>`}
 
 /* ======================= EVENTOS ======================= */
-document.addEventListener('click',async e=>{const t=e.target.closest('[data-rmfoto],[data-room],[data-new],[data-edit],[data-act],[data-eu],[data-pes],[data-pagar],[data-csel],[data-newcard]');if(!t)return;
+document.addEventListener('click',async e=>{const t=e.target.closest('[data-rmfoto],[data-room],[data-new],[data-edit],[data-act],[data-eu],[data-pes],[data-otab],[data-pagar],[data-csel],[data-newcard]');if(!t)return;
  if(t.dataset.rmfoto!==undefined){const i=+t.dataset.rmfoto;if(await ask('Remover esta foto?')){FOTOS.splice(i,1);LEGENDAS.splice(i,1);Store.fotos();render()}return}
  if(t.dataset.pagar){const c=Object.assign({},D.cartoes[t.dataset.pagar]);c.pagas=Object.assign({},c.pagas,{[UI.mes]:!(c.pagas||{})[UI.mes]});Store.put('cartoes',c);return}
  if(t.dataset.newcard){if(!vals('cartoes').some(c=>c.ativo!==false)){toast('Cadastre um cartão primeiro');openForm('cartoes');return}openForm(t.dataset.newcard,null,{pgto:CARTAO,cartao:UI.cardSel||defCard()});return}
@@ -747,6 +762,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('[data-rmfo
  if(t.dataset.edit){const [c,id]=t.dataset.edit.split(':');openForm(c,D[c][id]);return}
  if(t.dataset.eu){UI.eu=t.dataset.eu;LS.set('casa_eu',UI.eu);render();return}
  if(t.dataset.pes){UI.pesTab=t.dataset.pes;render();return}
+ if(t.dataset.otab){UI.obraTab=t.dataset.otab;render();return}
  const a=t.dataset.act;
  if(a==='logout'){LS.set('casa_cache','');try{await firebase.auth().signOut()}catch(_){}location.reload();return}
  if(a==='mprev'){UI.mes=addM(UI.mes,-1);render()}
